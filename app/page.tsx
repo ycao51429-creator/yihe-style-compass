@@ -4,6 +4,7 @@ import { ArrowUpRight, ArrowRight, Check, ChevronLeft, Heart, LocateFixed, MapPi
 import { recommend, makeQuery, type Profile, type Preferences, type Outfit } from "../lib/style-engine";
 import Look from "../components/look";
 import Merchant from "../components/merchant";
+import { discoveryRequest, isStaticDeployment } from "../lib/client-api";
 
 const initialProfile: Profile = { height: "", weight: "", bust: "", waist: "", hip: "", face: "不确定", hair: "", appearance: "", fit: "合身", presentation: "不限" };
 const initialPrefs: Preferences = { budget: 800, styles: ["简约通勤"], occasion: "日常通勤", season: "春秋", colors: "中性色", avoid: "" };
@@ -43,7 +44,7 @@ export default function Home() {
     if (!shareSearch) { setWebStatus("允许发送穿搭关键词后，可自动检索；也可以通过下方链接自行搜索。"); return; }
     webAbort.current?.abort(); const controller = new AbortController(); webAbort.current = controller;
     setWebBusy(true); setWebResults([]); setWebStatus("正在寻找公开穿搭参考…");
-    try { const r = await fetch("/api/discover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "inspiration", query: makeQuery(profile, prefs) }), signal: controller.signal }); const data: any = await r.json(); if (!r.ok) throw new Error(data.message || "搜索暂时不可用"); setWebResults(data.results); setWebStatus(data.results.length ? "公开网页参考 · 不代表已核实模特身材或面部相似度" : "暂未找到匹配结果，可尝试减少条件。"); }
+    try { const r = await discoveryRequest({ action: "inspiration", query: makeQuery(profile, prefs) }, controller.signal); const data: any = await r.json(); if (!r.ok) throw new Error(data.message || "搜索暂时不可用"); setWebResults(data.results); setWebStatus(data.results.length ? "公开网页参考 · 不代表已核实模特身材或面部相似度" : "暂未找到匹配结果，可尝试减少条件。"); }
     catch (e: any) { if (e.name !== "AbortError") setWebStatus(e.message || "网络连接失败，请稍后重试。"); }
     finally { if (webAbort.current === controller) setWebBusy(false); }
   }
@@ -56,7 +57,7 @@ export default function Home() {
   async function findShops() {
     if (!coords && city.trim().length < 2) { setNotice("请填写城市与商圈，或使用当前位置。"); return; }
     shopsAbort.current?.abort(); const controller = new AbortController(); shopsAbort.current = controller; setLoading(true); setShops([]); setShopStatus("正在查询附近服装店…");
-    try { const r = await fetch("/api/discover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "stores", city, coords, radius }), signal: controller.signal }); const data: any = await r.json(); if (!r.ok) throw new Error(data.message || "门店查询暂时不可用"); setShops(data.stores); setShopStatus(data.stores.length ? `${data.region || city || "当前位置"} · 高德地图 · 查询于 ${new Date(data.fetchedAt).toLocaleTimeString("zh-CN")}` : "该范围暂无返回的门店，请扩大范围或换个商圈。"); }
+    try { const r = await discoveryRequest({ action: "stores", city, coords, radius }, controller.signal); const data: any = await r.json(); if (!r.ok) throw new Error(data.message || "门店查询暂时不可用"); setShops(data.stores); setShopStatus(data.stores.length ? `${data.region || city || "当前位置"} · 高德地图 · 查询于 ${new Date(data.fetchedAt).toLocaleTimeString("zh-CN")}` : "该范围暂无返回的门店，请扩大范围或换个商圈。"); }
     catch (e: any) { if (e.name !== "AbortError") setShopStatus(e.message || "网络连接失败，请稍后重试。"); }
     finally { if (shopsAbort.current === controller) setLoading(false); }
   }
@@ -67,6 +68,7 @@ export default function Home() {
   return <div className="app-shell">
     <header className="topbar"><button className="brand" onClick={() => go(0)} aria-label="衣合首页"><span className="brand-mark">衣</span><b>衣合<span>STYLE COMPASS</span></b></button><nav aria-label="主导航">{tabs.map((t, i) => <button key={t} className={tab === i ? "active" : ""} onClick={() => go(i)}>{t}</button>)}</nav><button className="help-btn" onClick={() => setHelp(true)}><CircleHelp size={18}/><span>使用说明</span></button></header>
     <main>
+      {isStaticDeployment && <p className="deployment-note">独立网页版 · 无需登录。搭配在本机生成；门店与网上参考可通过外部搜索查看。</p>}
       <div className="eyebrow"><span/> PERSONAL STYLE, REAL LIFE <span className="edition">中国大陆 · CNY</span></div>
       <section className="intro"><div><h1>{[<>好穿搭，从<span>了解你</span>开始。</>, <>找到你的<span>风格坐标。</span></>, <>适合你的，<span>才是好搭配。</span></>, <>把喜欢的穿搭，<span>带进生活。</span></>][tab]}</h1><p>{["每个人的身材与喜好都不同。让每一次选择，更适合自己。", "预算、场景和偏好，一起决定属于你的日常穿搭。", "从比例、配色到预算，给每一件衣服一个合适的位置。", "从你所在的城市出发，发现可以走进去试穿的店。"][tab]}</p></div><span className="chapter">0{tab + 1}<small> / 04</small></span></section>
       <div className="stepbar">{tabs.map((t, i) => <button key={t} onClick={() => go(i)} className={tab === i ? "selected" : ""}><span>{i < tab ? <Check size={13}/> : `0${i + 1}`}</span>{t}{i < 3 && <i/>}</button>)}</div>

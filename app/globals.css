@@ -7,3 +7,5 @@
 .merchant{border-top:1px solid var(--line);margin-top:12px;padding-top:6px}.merchant-data{font-size:11px;line-height:1.9;color:#77806a}.merchant-data p{margin:8px 0}.merchant-data a{color:var(--green);text-decoration:underline}.stock-row{padding:9px 0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}.stock-row b{font-weight:500}
 
 .deployment-note{margin-top:18px;background:#edf0e4;color:#5e7355;border-radius:6px;padding:10px 14px;font-size:11px;line-height:1.8}
+
+.topbar nav{gap:22px}.topbar nav button{white-space:nowrap}@media(max-width:1150px){.topbar nav{gap:14px}.topbar nav button{font-size:12px}}@media(max-width:760px){.topbar nav{overflow-x:auto;justify-content:flex-start;gap:24px;scrollbar-width:none;height:46px}.topbar nav button{flex-shrink:0;font-size:12px}.topbar nav::-webkit-scrollbar{display:none}}

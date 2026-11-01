@@ -4,6 +4,7 @@ import { ArrowUpRight, ArrowRight, Check, ChevronLeft, Heart, LocateFixed, MapPi
 import { recommend, makeQuery, type Profile, type Preferences, type Outfit } from "../lib/style-engine";
 import Look from "../components/look";
 import FittingRoom from "../components/fitting-room";
+import Concierge from "../components/concierge";
 import Merchant from "../components/merchant";
 import { discoveryRequest, isStaticDeployment } from "../lib/client-api";
 
@@ -14,7 +15,8 @@ const tabs = ["我的档案", "风格偏好", "搭配方案", "附近好店"];
 const safeLink = (url: string) => /^https?:\/\//i.test(url) ? url : "#";
 
 export default function Home() {
-  const [tab, setTab] = useState(4);
+  const [tab, setTab] = useState(5);
+  const [sessionVersion,setSessionVersion]=useState(0);
   const [profile, setProfile] = useState<Profile>(initialProfile);
   const [prefs, setPrefs] = useState<Preferences>(initialPrefs);
   const [photo, setPhoto] = useState(""); const photoRef = useRef("");
@@ -40,7 +42,7 @@ export default function Home() {
   function go(n: number) { setTab(n); window.scrollTo({ top: 0, behavior: "smooth" }); }
   function demo() { setProfile({ ...initialProfile, height: "168", weight: "58", bust: "86", waist: "70", hip: "94", face: "圆脸", hair: "齐肩发" }); setNotice("已填入示例数据，请按你的真实情况修改。"); }
   function save() { try { if (!consent) { setNotice("请先勾选仅在这台设备保存档案。"); return; } localStorage.setItem("yihe-profile-v1", JSON.stringify({ profile, prefs })); setSaved(true); setNotice("档案已保存在这台设备，不包含照片或定位。"); } catch { setNotice("浏览器不允许本地保存，你仍可继续使用。"); } }
-  function clear() { webAbort.current?.abort(); shopsAbort.current?.abort(); try { localStorage.removeItem("yihe-profile-v1"); } catch {} setProfile(initialProfile); setPrefs(initialPrefs); setSaved(false); setConsent(false); setShareSearch(false); setOutfits([]); setFavorites([]); setWebResults([]); setShops([]); setCoords(null); setCity(""); setPhoto(""); if (photoRef.current) URL.revokeObjectURL(photoRef.current); photoRef.current = ""; setShopStatus(""); setWebStatus(""); setNotice("档案、照片和本次位置已清除。"); }
+  function clear() { setSessionVersion(n=>n+1); webAbort.current?.abort(); shopsAbort.current?.abort(); try { localStorage.removeItem("yihe-profile-v1"); } catch {} setProfile(initialProfile); setPrefs(initialPrefs); setSaved(false); setConsent(false); setShareSearch(false); setOutfits([]); setFavorites([]); setWebResults([]); setShops([]); setCoords(null); setCity(""); setPhoto(""); if (photoRef.current) URL.revokeObjectURL(photoRef.current); photoRef.current = ""; setShopStatus(""); setWebStatus(""); setNotice("档案、对话、收藏、照片和本次位置已清除。"); }
   async function searchReferences() {
     if (!shareSearch) { setWebStatus("允许发送穿搭关键词后，可自动检索；也可以通过下方链接自行搜索。"); return; }
     webAbort.current?.abort(); const controller = new AbortController(); webAbort.current = controller;
@@ -66,15 +68,16 @@ export default function Home() {
   const query = makeQuery(profile, prefs);
   const visibleOutfits = onlySaved ? outfits.filter(o => favorites.includes(o.id)) : outfits;
   const sortedShops = [...shops].sort((a, b) => sort === "rating" ? (b.rating ?? -1) - (a.rating ?? -1) : (a.distance ?? Infinity) - (b.distance ?? Infinity));
-  return <div className={tab === 4 ? "app-shell studio-active" : "app-shell"}>
-    <header className="topbar"><button className="brand" onClick={() => go(4)} aria-label="衣合首页"><span className="brand-mark">衣</span><b>衣合<span>STYLE COMPASS</span></b></button><nav aria-label="主导航"><button className={tab === 4 ? "active" : ""} onClick={() => go(4)}>3D 试衣间</button>{tabs.map((t, i) => <button key={t} className={tab === i ? "active" : ""} onClick={() => go(i)}>{t}</button>)}</nav><button className="help-btn" onClick={() => setHelp(true)}><CircleHelp size={18}/><span>使用说明</span></button></header>
+  return <div className={tab >= 5 ? "app-shell concierge-active" : tab === 4 ? "app-shell studio-active" : "app-shell"}>
+    <header className="topbar"><button className="brand" onClick={() => go(5)} aria-label="衣合首页"><span className="brand-mark">衣</span><b>衣合<span>STYLE COMPASS</span></b></button><nav aria-label="主导航"><button className={tab === 5 ? "active" : ""} onClick={() => go(5)}>穿搭顾问</button><button className={tab === 6 ? "active" : ""} onClick={() => go(6)}>精选衣橱</button><button className={tab === 4 ? "active" : ""} onClick={() => go(4)}>3D 试衣间</button>{tabs.map((t, i) => <button key={t} className={tab === i ? "active" : ""} onClick={() => go(i)}>{t}</button>)}</nav><button className="help-btn" onClick={() => setHelp(true)}><CircleHelp size={18}/><span>使用说明</span></button></header>
     <main>
-      {isStaticDeployment && tab !== 4 && <p className="deployment-note">独立网页版 · 无需登录。搭配在本机生成；门店与网上参考可通过外部搜索查看。</p>}
-      {tab !== 4 && <><div className="eyebrow"><span/> PERSONAL STYLE, REAL LIFE <span className="edition">中国大陆 · CNY</span></div>
+      {isStaticDeployment && tab < 4 && <p className="deployment-note">独立网页版 · 无需登录。搭配在本机生成；门店与网上参考可通过外部搜索查看。</p>}
+      {tab < 4 && <><div className="eyebrow"><span/> PERSONAL STYLE, REAL LIFE <span className="edition">中国大陆 · CNY</span></div>
       <section className="intro"><div><h1>{[<>好穿搭，从<span>了解你</span>开始。</>, <>找到你的<span>风格坐标。</span></>, <>适合你的，<span>才是好搭配。</span></>, <>把喜欢的穿搭，<span>带进生活。</span></>][tab]}</h1><p>{["每个人的身材与喜好都不同。让每一次选择，更适合自己。", "预算、场景和偏好，一起决定属于你的日常穿搭。", "从比例、配色到预算，给每一件衣服一个合适的位置。", "从你所在的城市出发，发现可以走进去试穿的店。"][tab]}</p></div><span className="chapter">0{tab + 1}<small> / 04</small></span></section>
       <div className="stepbar">{tabs.map((t, i) => <button key={t} onClick={() => go(i)} className={tab === i ? "selected" : ""}><span>{i < tab ? <Check size={13}/> : `0${i + 1}`}</span>{t}{i < 3 && <i/>}</button>)}</div>
       </>}
-      {tab === 4 && <FittingRoom profile={profile} onProfile={() => go(0)} onExplore={style => { setPrefs(p => ({...p, styles: [style]})); go(1); }}/>}
+      <div hidden={tab < 5}><Concierge key={sessionVersion} view={tab === 6 ? "catalog" : "home"} profile={profile} prefs={prefs} onChange={(p,f)=>{setProfile(p);setPrefs(f);}} onNavigate={go} onGenerate={generate}/></div>
+      {tab === 4 && <FittingRoom key={sessionVersion} profile={profile} onProfile={() => go(0)} onExplore={style => { setPrefs(p => ({...p, styles: [style]})); go(1); }}/>}
       {tab === 0 && <div className="profile-grid"><section className="panel"><div className="panel-title"><div><p className="overline">YOUR PROFILE</p><h2>先认识一下你</h2></div><button className="text-btn" onClick={demo}>试试示例 <ArrowUpRight size={15}/></button></div><form onSubmit={e => { e.preventDefault(); go(1); }}>
         <div className="section-caption"><span>01</span><h3>身材信息</h3><small>用于版型与比例建议</small></div>
         <div className="fields two">{([["height", "身高", "cm", 100, 230], ["weight", "体重", "kg", 25, 250]] as const).map(([key, label, unit, min, max]) => <label key={key}>{label}<span className="input-unit"><input type="number" min={min} max={max} step="0.1" required value={profile[key]} onChange={e => update(key, e.target.value)} placeholder={key === "height" ? "例如 168" : "例如 58"}/><em>{unit}</em></span></label>)}</div>
@@ -94,6 +97,6 @@ export default function Home() {
       <footer><div><b>衣合</b><span>穿得合适，也活得自在。</span></div><button onClick={() => setHelp(true)}>数据与隐私</button><span>STYLE COMPASS © 2026</span></footer>
     </main>
     {notice && <div className="toast" role="status">{notice}<button aria-label="关闭通知" onClick={() => setNotice("")}><X size={16}/></button></div>}
-    {help && <div className="modal-backdrop" onClick={() => setHelp(false)}><section className="modal panel" role="dialog" aria-modal="true" aria-labelledby="help-title" onClick={e => e.stopPropagation()}><button className="modal-close" aria-label="关闭说明" onClick={() => setHelp(false)}><X/></button><p className="overline">ABOUT YOUR DATA</p><h2 id="help-title">使用说明与隐私</h2><p>3D 试衣间提供四套可旋转的款式示意，可调整配色、身材与松量。它不重建本人长相，不模拟真实布料，也不预测商品尺码是否合身。未导入档案时使用示例身材；导入缺少的尺寸仍使用示例值。</p><p>1. 填写身材与外观描述，再选择预算、风格、场景和季节。</p><p>2. 搭配由本地规则生成，图片为配色示意，金额为预算计划。照片仅供自己预览，不进行面部识别或相似人脸检索。</p><p>3. 联网参考需要搜索服务接入。附近门店需要地图服务接入。未接入时仍可打开外部搜索；评分、库存不会编造。</p><p>4. 仅在你允许时发送穿搭关键词；仅在查找门店时发送位置。第三方网站遵循各自的隐私政策。</p><label className="check-label"><input type="checkbox" checked={consent} onChange={e => { setConsent(e.target.checked); if (!e.target.checked) { try { localStorage.removeItem("yihe-profile-v1"); } catch {} setSaved(false); } }}/><span>仅在这台设备保存档案和偏好（不保存照片、位置）</span></label><div className="button-row"><button className="primary" onClick={save}>{saved ? "更新本地档案" : "保存本地档案"}</button><button className="secondary" onClick={clear}>清除我的数据</button></div><p className="hint">关闭页面后未保存的内容会丢失；收藏仅在本次会话有效。</p></section></div>}
+    {help && <div className="modal-backdrop" onClick={() => setHelp(false)}><section className="modal panel" role="dialog" aria-modal="true" aria-labelledby="help-title" onClick={e => e.stopPropagation()}><button className="modal-close" aria-label="关闭说明" onClick={() => setHelp(false)}><X/></button><p className="overline">ABOUT YOUR DATA</p><h2 id="help-title">使用说明与隐私</h2><p>穿搭顾问当前采用本地资料与规则，支持识别预算、场景、身材与避开条件，并非已接通的开放式大模型。精选衣橱展示可核实的品牌资料、图片来源与外部测评入口；未核实的数据明确标记，不能作为实时售价或库存。</p><p>3D 试衣间提供四套可旋转的款式示意，可调整配色、身材与松量。它不重建本人长相，不模拟真实布料，也不预测商品尺码是否合身。未导入档案时使用示例身材；导入缺少的尺寸仍使用示例值。</p><p>1. 填写身材与外观描述，再选择预算、风格、场景和季节。</p><p>2. 搭配由本地规则生成，图片为配色示意，金额为预算计划。照片仅供自己预览，不进行面部识别或相似人脸检索。</p><p>3. 联网参考需要搜索服务接入。附近门店需要地图服务接入。未接入时仍可打开外部搜索；评分、库存不会编造。</p><p>4. 仅在你允许时发送穿搭关键词；仅在查找门店时发送位置。第三方网站遵循各自的隐私政策。</p><label className="check-label"><input type="checkbox" checked={consent} onChange={e => { setConsent(e.target.checked); if (!e.target.checked) { try { localStorage.removeItem("yihe-profile-v1"); } catch {} setSaved(false); } }}/><span>仅在这台设备保存档案和偏好（不保存照片、位置）</span></label><div className="button-row"><button className="primary" onClick={save}>{saved ? "更新本地档案" : "保存本地档案"}</button><button className="secondary" onClick={clear}>清除我的数据</button></div><p className="hint">关闭页面后未保存的内容会丢失；收藏仅在本次会话有效。</p></section></div>}
   </div>;
 }

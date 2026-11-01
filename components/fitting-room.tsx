@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { createRetailModel, updateRetailModel, disposeRetailModel } from "../lib/retail-model";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { ArrowUpRight, ArrowRight, Check, RotateCcw, Download, Move, Pause, Play, Maximize, Sparkles, SlidersHorizontal, Shirt } from "lucide-react";
-import { makeAvatar, disposeObject, wardrobe, type AvatarOptions, type Body, type LookKind } from "../lib/avatar";
+import { wardrobe, type AvatarOptions, type Body, type LookKind } from "../lib/avatar";
 import type { Profile } from "../lib/style-engine";
 import Look from "./look";
 import "./fitting-room.css";
@@ -15,6 +17,9 @@ function AvatarViewer({ options, spin, api, onStatus }: { options: AvatarOptions
   const optionsRef = useRef(options); optionsRef.current = options;
   const spinRef = useRef(spin); spinRef.current = spin;
   const [failed, setFailed] = useState(false);
+  const [modelLoading, setModelLoading] = useState(true);
+  const [modelError, setModelError] = useState(false);
+  const requestVersion=useRef(0);
   useEffect(() => {
     const element = host.current!;
     let renderer: THREE.WebGLRenderer;
@@ -22,7 +27,7 @@ function AvatarViewer({ options, spin, api, onStatus }: { options: AvatarOptions
     catch { setFailed(true); onStatus("当前浏览器不支持 3D。可换用系统浏览器，其他搭配功能仍可使用。"); return; }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.20;
+    renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .95;
     element.appendChild(renderer.domElement);
     renderer.domElement.setAttribute("aria-label", "可拖动旋转的三维穿搭人物；使用下方按钮也可切换视角和缩放");
     renderer.domElement.setAttribute("role", "img");
@@ -32,15 +37,16 @@ function AvatarViewer({ options, spin, api, onStatus }: { options: AvatarOptions
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(0,.91,0); controls.enableDamping = true; controls.dampingFactor = .09; controls.enablePan = false;
     controls.minDistance = 2.4; controls.maxDistance = 6.7; controls.minPolarAngle = .55; controls.maxPolarAngle = 1.85; controls.autoRotateSpeed = .65;
-    scene.add(new THREE.HemisphereLight(0xfff8f0, 0x8f8b9e, 2.4));
-    const key = new THREE.DirectionalLight(0xfff6e6, 3.2); key.position.set(3,5,4); key.castShadow = true;
+    scene.add(new THREE.HemisphereLight(0xfff8f0, 0x8f8b9e, 1.2));
+    const key = new THREE.DirectionalLight(0xfff6e6, 2.0); key.position.set(3,5,4); key.castShadow = true;
     key.shadow.mapSize.set(1024,1024); key.shadow.camera.left=-2; key.shadow.camera.right=2; key.shadow.camera.top=3; key.shadow.camera.bottom=-2; key.shadow.normalBias=.025;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xcbd4ff,2); fill.position.set(-3,2,-2); scene.add(fill);
+    const fill = new THREE.DirectionalLight(0xcbd4ff,.8); fill.position.set(-3,2,-2); scene.add(fill);
     const floor = new THREE.Mesh(new THREE.CircleGeometry(4,80),new THREE.ShadowMaterial({ color: 0x4d4558, opacity:.17 })); floor.rotation.x=-Math.PI/2; floor.position.y=-.014; floor.receiveShadow=true; scene.add(floor);
     const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(.46,.49,.055,80),new THREE.MeshStandardMaterial({color:0xf3eee6,roughness:.85})); pedestal.position.y=-.041; pedestal.receiveShadow=true; pedestal.castShadow=true; scene.add(pedestal);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(.53,.0014,6,100),new THREE.MeshBasicMaterial({color:0xbdb1c8})); ring.rotation.x=Math.PI/2; ring.position.y=-.012; scene.add(ring);
-    const avatar = makeAvatar(optionsRef.current); scene.add(avatar);
+    const environment=new RoomEnvironment();const pmrem=new THREE.PMREMGenerator(renderer);const env=pmrem.fromScene(environment,.04);scene.environment=env.texture;scene.environmentIntensity=.65;environment.dispose();pmrem.dispose();
+    const avatar = new THREE.Group(); scene.add(avatar);
     const render = () => renderer.render(scene,camera);
     state.current = { scene, avatar, renderer, controls, render };
     const resize = () => {
@@ -73,12 +79,19 @@ function AvatarViewer({ options, spin, api, onStatus }: { options: AvatarOptions
     const lost=(e:Event)=>{e.preventDefault();setFailed(true);onStatus("3D 显示已中断，请刷新页面重试。其他搭配功能仍可使用。");};
     renderer.domElement.addEventListener("webglcontextlost",lost);
     onStatus("");
-    return ()=>{cancelAnimationFrame(raf);observer.disconnect();intersection.disconnect();controls.dispose();renderer.domElement.removeEventListener("webglcontextlost",lost);disposeObject(scene);renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();state.current=null;api.current=null;};
+    return ()=>{cancelAnimationFrame(raf);observer.disconnect();intersection.disconnect();controls.dispose();renderer.domElement.removeEventListener("webglcontextlost",lost);disposeRetailModel(state.current?.avatar || avatar);[floor,pedestal,ring].forEach(m=>{m.geometry.dispose();m.material.dispose();});env.dispose();renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();state.current=null;api.current=null;};
   }, [api,onStatus]);
   useEffect(()=>{
-    const s=state.current;if(!s)return;const next=makeAvatar(options);s.scene.remove(s.avatar);disposeObject(s.avatar);s.scene.add(next);s.avatar=next;s.render();
+    const s=state.current;if(!s)return;
+    const version=++requestVersion.current;
+    if(s.avatar.userData.kind===options.kind){updateRetailModel(s.avatar,options);s.render();setModelLoading(false);setModelError(false);return;}
+    setModelLoading(true);setModelError(false);
+    createRetailModel(options.kind).then(next=>{
+      if(version!==requestVersion.current || state.current!==s){disposeRetailModel(next);return;}
+      updateRetailModel(next,optionsRef.current);s.scene.remove(s.avatar);disposeRetailModel(s.avatar);s.scene.add(next);s.avatar=next;s.renderer.domElement.dataset.look=next.userData.kind;s.render();setModelLoading(false);
+    }).catch(()=>{if(version===requestVersion.current){setModelLoading(false);setModelError(true);}});
   },[options]);
-  return <div ref={host} className="avatar-canvas" data-testid="avatar-viewer">{failed&&<div className="webgl-fallback"><Look/><b>当前设备暂时无法显示 3D</b><p>试试系统浏览器，或继续使用搭配方案。</p><small>上图为二维配色参考</small></div>}</div>;
+  return <div ref={host} className="avatar-canvas" data-testid="avatar-viewer">{modelLoading&&!failed&&<div className="model-loading">正在准备立体人台与服装…</div>}{modelError&&<div className="model-loading">模型暂时未加载成功，请刷新重试。仍可查看商品实拍。</div>}{failed&&<div className="webgl-fallback"><Look/><b>当前设备暂时无法显示 3D</b><p>试试系统浏览器，或继续使用搭配方案。</p><small>上图为二维配色参考</small></div>}</div>;
 }
 
 const defaults:Body={height:168,bust:86,waist:70,hip:94};
@@ -119,15 +132,15 @@ export default function FittingRoom({profile,onProfile,onExplore}:{profile:Profi
         <div className="stage-help"><Move size={12}/><span>拖动旋转 · 双指或按钮缩放</span></div>
       </section>
       <aside className="studio-settings"><div className="studio-panel-heading"><span>02 / MAKE IT YOURS</span><SlidersHorizontal size={16}/></div><h2>更接近你的样子</h2>
-        <div className="setting-section"><div className="setting-label"><b>服装配色</b><span>{colorNames[colors.indexOf(color)]||"自选"}</span></div><div className="color-options">{colors.map((c,i)=><button key={c} aria-label={`${colorNames[i]}配色`} aria-pressed={color===c} style={{background:c}} className={color===c?"picked":""} onClick={()=>setColor(c)}>{color===c&&<Check size={13}/>}</button>)}</div><p className="setting-hint">{kind==="skirt"?"调整半裙颜色":"调整上装颜色"}</p></div>
+        <div className="setting-section"><div className="setting-label"><b>服装配色</b><span>{colorNames[colors.indexOf(color)]||"自选"}</span></div><div className="color-options">{colors.map((c,i)=><button key={c} aria-label={`${colorNames[i]}配色`} aria-pressed={color===c} style={{background:c}} className={color===c?"picked":""} onClick={()=>setColor(c)}>{color===c&&<Check size={13}/>}</button>)}</div><p className="setting-hint">{kind==="skirt"?"调整连衣裙颜色":"调整上装颜色"}</p></div>
         <div className="setting-section"><div className="setting-label"><b>穿着轮廓</b><span>示意松量</span></div><div className="ease-control">{["修身","合身","宽松"].map((s,i)=><button key={s} aria-pressed={ease===i} className={ease===i?"picked":""} onClick={()=>setEase(i)}>{s}</button>)}</div></div>
         <div className="setting-section body-settings"><div className="setting-label"><b>身材比例</b><button onClick={useProfile}>导入我的档案 <ArrowUpRight size={12}/></button></div>{(Object.keys(defaults) as (keyof Body)[]).map(k=><label className="body-slider" key={k}><span>{labels[k]}<output>{body[k]} <small>cm</small></output></span><input type="range" min={limits[k][0]} max={limits[k][1]} value={body[k]} aria-label={`模型${labels[k]}`} onChange={e=>{setBody({...body,[k]:Number(e.target.value)});setBodySource("自定义身材");}}/></label>)}<button className="reset-body" onClick={()=>{setBody(defaults);setBodySource("示例身材");setEase(1);}}><RotateCcw size={12}/> 恢复示例比例</button></div>
-        <div className="setting-section skin-row"><b>模特肤色</b><div className="color-options">{["#eed0b3","#cda78b","#946d52","#583e31"].map((c,i)=><button key={c} aria-label={`模特肤色${i+1}`} aria-pressed={skin===c} style={{background:c}} className={skin===c?"picked":""} onClick={()=>setSkin(c)}>{skin===c&&<Check size={12}/>}</button>)}</div></div>
+        <div className="setting-section skin-row"><b>人台颜色</b><div className="color-options">{["#eed0b3","#cda78b","#946d52","#583e31"].map((c,i)=><button key={c} aria-label={`人台颜色${i+1}`} aria-pressed={skin===c} style={{background:c}} className={skin===c?"picked":""} onClick={()=>setSkin(c)}>{skin===c&&<Check size={12}/>}</button>)}</div></div>
         <button className="save-look" onClick={()=>api.current?.capture()}><Download size={16}/> 保存这套穿搭</button><p className="setting-hint">模型参数仅用于本次预览，不修改档案</p>
       </aside>
     </div>
     {status&&<p className="studio-status" role="status">{status}</p>}
-    <div className="studio-bottom"><p><span>体验版</span>3D 为款式与比例示意，尚不模拟真实面料、尺码合身度或本人长相。</p><button onClick={onProfile}>完善我的身材档案 <ArrowRight size={15}/></button></div>
+    <div className="studio-bottom"><p><span>体验版</span>实体人台风格 · 服装为通用展示模型，并非精选衣橱中商品的复刻；体型调整不代表真实尺码。</p><button onClick={onProfile}>完善我的身材档案 <ArrowRight size={15}/></button></div>
     <section className="studio-next"><div className="next-number">NEXT<br/><b>01—03</b></div><div><h2>好看的下一步，是适合你的生活。</h2><p>把身材、风格和预算放在一起，再去附近的店里试一试。</p></div><button onClick={()=>onExplore(selected.style)}>开始我的搭配 <ArrowUpRight size={21}/></button></section>
   </div>;
 }

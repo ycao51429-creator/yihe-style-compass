@@ -4,10 +4,10 @@ export type Body = { height: number; bust: number; waist: number; hip: number };
 export type LookKind = "tailored" | "knit" | "skirt" | "sport";
 export type AvatarOptions = { body: Body; kind: LookKind; color: string; skin: string; ease: number };
 export const wardrobe: { id: LookKind; title: string; subtitle: string; tag: string; color: string; bottom: string; style: string }[] = [
-  { id: "tailored", title: "都市的从容", subtitle: "西装外套 / 直筒长裤", tag: "CITY ESSENTIALS", color: "#626c80", bottom: "#444c5f", style: "简约通勤" },
-  { id: "knit", title: "把周末放慢", subtitle: "落肩针织 / 奶油长裤", tag: "SLOW WEEKEND", color: "#89987c", bottom: "#e5ddd0", style: "松弛休闲" },
-  { id: "skirt", title: "午后的浪漫", subtitle: "短袖上衣 / 百褶半裙", tag: "A LITTLE ROMANCE", color: "#b77766", bottom: "#b77766", style: "法式复古" },
-  { id: "sport", title: "自由地出发", subtitle: "连帽卫衣 / 束脚长裤", tag: "OFF DUTY", color: "#aaa0c1", bottom: "#454753", style: "街头运动" },
+  { id: "tailored", title: "都市的从容", subtitle: "工装外套 / 经典牛仔", tag: "CITY ESSENTIALS", color: "#626c80", bottom: "#444c5f", style: "简约通勤" },
+  { id: "knit", title: "把周末放慢", subtitle: "休闲衬衫 / 经典牛仔", tag: "SLOW WEEKEND", color: "#89987c", bottom: "#e5ddd0", style: "松弛休闲" },
+  { id: "skirt", title: "午后的浪漫", subtitle: "收腰连衣裙 / 休闲鞋", tag: "A LITTLE ROMANCE", color: "#b77766", bottom: "#b77766", style: "法式复古" },
+  { id: "sport", title: "自由地出发", subtitle: "连帽卫衣 / 经典牛仔", tag: "OFF DUTY", color: "#aaa0c1", bottom: "#454753", style: "街头运动" },
 ];
 
 type Ring = [number, number, number]; // height, horizontal radius, depth radius

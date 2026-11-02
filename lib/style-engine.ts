@@ -1,5 +1,6 @@
+import {weatherItems,weatherAdvice,type WeatherContext} from './weather.ts';
 export type Profile = { height: string; weight: string; bust: string; waist: string; hip: string; face: string; hair: string; appearance: string; fit: string; presentation: string };
-export type Preferences = { budget: number; styles: string[]; occasion: string; season: string; colors: string; avoid: string };
+export type Preferences = { budget: number; styles: string[]; occasion: string; season: string; colors: string; avoid: string; weather?: WeatherContext };
 export type Outfit = { id: string; variant: number; style: string; title: string; reason: string; items: { name: string; price: number }[]; total: number; fitNote: string };
 const sets: Record<string, string[]> = {
   "简约通勤": ["燕麦短外套与奶油白内搭", "深咖垂坠阔腿裤", "深棕简洁乐福鞋", "小巧结构感肩包"],
@@ -32,12 +33,13 @@ export function recommend(p: Profile, f: Preferences): Outfit[] {
     if (f.occasion === "周末出游" || f.occasion === "校园学习") items[2] = "便于步行的休闲鞋";
     if (i === 1 && styles.length === 1 && f.occasion !== "正式场合") items[1] = "舒适直筒长裤";
     if (i === 2 && styles.length === 1) items[3] = "轻巧通勤背包";
+    items = weatherItems(items,f.weather);
     const defaults = ["按避开条件另选的上装", "按避开条件另选的下装", "按避开条件另选的鞋履", "按避开条件另选的配件"];
     items = items.map((name, n) => avoid.some(term => name.includes(term) || (term.includes("裙") && name.includes("裙"))) ? defaults[n] : name);
     const limit = Math.floor(budget * [0.85, 0.95, 1][i]); const weights = f.season === "冬季" ? [.46, .24, .23, .07] : [.35, .3, .25, .1];
     const prices = weights.map(w => Math.floor(limit * w)); prices[3] += limit - prices.reduce((a, b) => a + b, 0);
     return { id: `look-${i}`, variant: i, style, title: ["把日常穿得刚刚好", "留一点自在的余地", "简单，也可以很出彩"][i], items: items.map((name, j) => ({ name, price: prices[j] })), total: limit,
       reason: `${f.occasion}以${style}为基础，采用${palette[f.colors] || palette["中性色"]}。${Number(p.height) && Number(p.height) < 160 ? "可尝试短上装与高腰线，调整视觉比例。" : "通过上下装的长短关系调整比例。"}${face}`,
-      fitNote: `${fit}${ratio}${p.appearance ? ` 你的补充要求：${p.appearance}。可在试穿时逐项核对。` : ""}${avoid.length ? ` 选购时排除：${f.avoid}；请核对实际材质标签。` : ""}` };
+      fitNote: `${f.weather?weatherAdvice(f.weather).join(" ")+" ":""}${fit}${ratio}${p.appearance ? ` 你的补充要求：${p.appearance}。可在试穿时逐项核对。` : ""}${avoid.length ? ` 选购时排除：${f.avoid}；请核对实际材质标签。` : ""}` };
   });
 }

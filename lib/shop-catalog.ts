@@ -1,7 +1,7 @@
 export type Product = { id:string; name:string; brand:string; category:string; gender:string; season:string[]; styles:string[]; fabric:string; composition:string; advantage:string; caution:string; care:string; pairing:string; image:string; imagePosition:string; imageLabel:string; imageSource?:string; url:string; source:string; sourceDate:string; query:string; checkedAt:string };
-const linen="https://www.uniqlo.com/cn/news/topics/2026040801/";
+const linen="https://www.uniqlo.com/cn/news/sp/topics/2026040801/";
 const knit="https://www.uniqlo.com/cn/news/sp/topics/2025091801/";
-const cashmere="https://www.uniqlo.com/cn/news/topics/2026102801/";
+const cashmere="https://www.uniqlo.com/cn/news/sp/topics/2026102801/";
 const product=(id:string)=>`https://www.uniqlo.cn/product-detail.html?productCode=${id}`;
 const shared={brand:"UNIQLO 优衣库",checkedAt:"2026-11-01",imageLabel:"品牌官方系列模特图",composition:"专题未披露完整纤维比例；下单前核对商品成分标签。"};
 export const products:Product[]=[
@@ -10,7 +10,7 @@ export const products:Product[]=[
   {...shared,id:"linen-shirt",name:"法国麻衬衫 · 长袖",category:"衬衫",gender:"男装",season:["夏季","春秋"],styles:["松弛休闲","简约通勤"],fabric:"亚麻",advantage:"适合用一件衬衫完成干净的日常搭配，也可以敞开作轻外搭。",caution:"肩线、袖长比只看 S/M/L 更有用；浅色与深色的透光观感可能不同。",care:"洗后整理衣领与门襟，是否熨烫及温度请按实际洗标。",pairing:"藏青配米白裤，白色配深色裤；鞋子保持干净简洁。",image:linen+"img/850T_260408hYb6wZ.jpg",imagePosition:"82% center",url:product("u0000000068866"),source:linen,sourceDate:"2026-04-08",query:"优衣库 男装 法国麻 长袖 衬衫 测评"},
   {...shared,id:"linen-pants",name:"UNIQLO:C 法国麻长裤",category:"裤装",gender:"女装",season:["夏季","春秋"],styles:["简约通勤","松弛休闲"],fabric:"亚麻",advantage:"同材质套装能让整身更连贯，也适合单独搭简洁上衣。",caution:"重点试坐下、抬腿和走路；腰臀空间与裤长要分别确认。",care:"裤脚是否拖地、浅色是否透，都需要在自然光下看。",pairing:"短一点的上衣或轻轻塞入前衣角，让腰线更清楚。",image:linen+"img/850T_260408C7xQP1.jpg",imagePosition:"35% center",url:product("u0000000069761"),source:linen,sourceDate:"2026-04-08",query:"优衣库 C 法国麻 长裤 测评"},
   {...shared,id:"cashmere-w",name:"羊绒圆领针织衫 · 女装",category:"针织",gender:"女装",season:["冬季","春秋"],styles:["温柔清新","简约通勤"],fabric:"羊绒",advantage:"优先考虑轻暖的叠穿体验，圆领方便与衬衫或外套组合。",caution:"不能仅凭“羊绒”二字判断耐磨程度。试穿时留意扎感，并查看长期起球反馈。",care:"以商品洗标为准，避免把所有羊绒一律当作可机洗。",pairing:"选择安静的中性色，再用一件有结构的下装平衡柔软感。",imageSource:knit,image:knit+"img/mimg_1_m.jpg",imagePosition:"65% center",imageLabel:"品牌针织系列模特图 · 非该 SKU 专属上身图",url:product("u0000000075617"),source:cashmere,sourceDate:"2026-10-28",query:"优衣库 羊绒 圆领 针织衫 女装 起球 测评"},
-  {...shared,id:"cashmere-m",name:"羊绒圆领针织衫 · 男装",category:"针织",gender:"男装",season:["冬季","春秋"],styles:["简约通勤","利落中性"],fabric:"羊绒",advantage:"可以用作衬衫之外的通勤选择，外套内的层次更柔和。",caution:"厚薄与版型会随款号和年份变化；旧视频不能直接证明当季质量。",care:"按洗标护理；先检查袖长、下摆与肩部活动空间。",pairing:"深棕或藏青针织配灰色长裤，颜色克制，靠材质形成层次。",imageSource:"https://www.uniqlo.com/cn/news/topics/2026101301/",image:"https://www.uniqlo.com/cn/news/topics/2026101301/img/880T_261012rYsVH6.jpg",imagePosition:"50% center",imageLabel:"品牌羊绒系列上身图 · 具体货号请与商家核对",url:product("u0000000066272"),source:cashmere,sourceDate:"2026-10-28",query:"优衣库 羊绒 圆领 针织衫 男装 测评"},
+  {...shared,id:"cashmere-m",name:"羊绒圆领针织衫 · 男装",category:"针织",gender:"男装",season:["冬季","春秋"],styles:["简约通勤","利落中性"],fabric:"羊绒",advantage:"可以用作衬衫之外的通勤选择，外套内的层次更柔和。",caution:"厚薄与版型会随款号和年份变化；旧视频不能直接证明当季质量。",care:"按洗标护理；先检查袖长、下摆与肩部活动空间。",pairing:"深棕或藏青针织配灰色长裤，颜色克制，靠材质形成层次。",imageSource:"https://www.uniqlo.com/cn/news/sp/topics/2026101301/",image:"https://www.uniqlo.com/cn/news/sp/topics/2026101301/img/880T_261012rYsVH6.jpg",imagePosition:"50% center",imageLabel:"品牌羊绒系列上身图 · 具体货号请与商家核对",url:product("u0000000066272"),source:cashmere,sourceDate:"2026-10-28",query:"优衣库 羊绒 圆领 针织衫 男装 测评"},
 ];
 export const editorial={image:knit+"img/mimg_1_m.jpg",source:knit,label:"UNIQLO 官方针织系列造型图 · 2025"};
 export const reviewSources=[

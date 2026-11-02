@@ -33,6 +33,7 @@ export async function createRetailModel(kind: LookKind, gender: "male" | "female
         return material;
       });
       object.material = Array.isArray(object.material) ? materials : materials[0];
+      materials.forEach(m=>{m.userData.originalMap=(m as THREE.MeshStandardMaterial).map;});
       if(names[i]==="clothing_trenchcoat"){
         const g=object.geometry.clone(),pos=g.getAttribute('position');
         for(let v=0;v<pos.count;v++){if(pos.getY(v)>=.95)continue;pos.setY(v,.95-(.95-pos.getY(v))*.68);for(const morph of g.morphAttributes.position||[])morph.setY(v,morph.getY(v)*.68);}
@@ -67,6 +68,7 @@ export async function createRetailModel(kind: LookKind, gender: "male" | "female
 export function updateRetailModel(root: THREE.Group, options: AvatarOptions) {
   const girth = (options.body.bust / 86 + options.body.waist / 70 + options.body.hip / 94) / 3;
   root.scale.set(1, options.body.height / 166, 1);
+  root.children.forEach(part=>{if(String(part.userData.part).startsWith("hair_"))part.visible=options.finish!=="ceramic";});
   root.children.forEach(part=>{const factor=part.userData.part === "base_body"?1:1+(options.ease-1)*.008;part.scale.x=factor;part.scale.z=factor;});
   root.traverse(object => {
     if (!(object instanceof THREE.Mesh)) return;
@@ -80,7 +82,7 @@ export function updateRetailModel(root: THREE.Group, options: AvatarOptions) {
     const mats = Array.isArray(object.material) ? object.material : [object.material];
     mats.forEach(m => {
       const material = m as THREE.MeshPhysicalMaterial;
-      if (part === "base_body") { if (/^Body$/i.test(object.name)) material.color.set(options.skin); }
+      if (part === "base_body") { const ceramic=options.finish==="ceramic";const wanted=ceramic?null:material.userData.originalMap;if(material.map!==wanted){material.map=wanted;material.needsUpdate=true;}material.roughness=ceramic?.42:.72;material.metalness=ceramic?.06:0;if(ceramic)material.color.set('#dbd4c5');else material.color.set(/^Body$/i.test(object.name)?options.skin:'#ffffff');if(/Eyebrow|Eyelash/i.test(object.name))object.visible=!ceramic; }
       else if (part.startsWith("hair_")) material.color.set("#332921");
       else if (/jacket|trenchcoat|shirt|hoodie|dress/.test(part) && part !== "clothing_tshirt") material.color.set(options.color);
       else material.color.set(part === "clothing_tshirt" ? "#e5dfd4" : part === "clothing_jeans" ? (options.bottomColor||"#343331") : "#332c28");

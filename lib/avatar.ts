@@ -2,7 +2,7 @@ import * as THREE from "three";
 
 export type Body = { height: number; bust: number; waist: number; hip: number };
 export type LookKind = "tailored" | "knit" | "skirt" | "sport";
-export type AvatarOptions = { body: Body; kind: LookKind; color: string; skin: string; ease: number; modelGender?: "male" | "female"; bottomColor?: string };
+export type AvatarOptions = { body: Body; kind: LookKind; color: string; skin: string; ease: number; modelGender?: "male" | "female"; finish?: "ceramic"|"natural"; bottomColor?: string };
 export const wardrobe: { id: LookKind; title: string; subtitle: string; tag: string; color: string; bottom: string; style: string }[] = [
   { id: "tailored", title: "都市的从容", subtitle: "长风衣 / 直筒裤 / 短靴", tag: "CITY ESSENTIALS", color: "#b4a28a", bottom: "#444c5f", style: "简约通勤" },
   { id: "knit", title: "把周末放慢", subtitle: "米白衬衫 / 深色直筒裤", tag: "SLOW WEEKEND", color: "#e8dfcf", bottom: "#e5ddd0", style: "松弛休闲" },

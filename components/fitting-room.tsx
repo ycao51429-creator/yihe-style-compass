@@ -10,6 +10,7 @@ import type { Profile } from "../lib/style-engine";
 import Look from "./look";
 import "./fitting-room.css";
 import "./fashion-edit.css";
+import "./world-style.css";
 
 type ViewerApi = { view: (angle: number) => void; reset: () => void; capture: () => void; zoom: (delta: number) => void };
 function AvatarViewer({ options, spin, api, onStatus }: { options: AvatarOptions; spin: boolean; api: React.RefObject<ViewerApi | null>; onStatus: (s: string) => void }) {
@@ -34,7 +35,7 @@ function AvatarViewer({ options, spin, api, onStatus }: { options: AvatarOptions
     renderer.domElement.setAttribute("role", "img");
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(32, 1, .05, 40);
-    camera.position.set(.72, 1.05, 3.05);
+    camera.position.set(1.0, 1.05, 3.3);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(0,.91,0); controls.enableDamping = true; controls.dampingFactor = .09; controls.enablePan = false;
     controls.minDistance = 2.4; controls.maxDistance = 6.7; controls.minPolarAngle = .55; controls.maxPolarAngle = 1.85; controls.autoRotateSpeed = .65;
@@ -43,10 +44,10 @@ function AvatarViewer({ options, spin, api, onStatus }: { options: AvatarOptions
     key.shadow.mapSize.set(1024,1024); key.shadow.camera.left=-2; key.shadow.camera.right=2; key.shadow.camera.top=3; key.shadow.camera.bottom=-2; key.shadow.normalBias=.025;
     scene.add(key);
     const fill = new THREE.DirectionalLight(0xf1e9dc,1.0); fill.position.set(-3,2,-2); scene.add(fill);
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(4,80),new THREE.ShadowMaterial({ color: 0x4d4558, opacity:.09 })); floor.rotation.x=-Math.PI/2; floor.position.y=-.014; floor.receiveShadow=true; scene.add(floor);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(4,80),new THREE.ShadowMaterial({ color: 0x4d4558, opacity:.14 })); floor.rotation.x=-Math.PI/2; floor.position.y=-.014; floor.receiveShadow=true; scene.add(floor);
     const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(.46,.49,.055,80),new THREE.MeshStandardMaterial({color:0xf3eee6,roughness:.85})); pedestal.position.y=-.041; pedestal.receiveShadow=true; pedestal.castShadow=true; scene.add(pedestal);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(.53,.0014,6,100),new THREE.MeshBasicMaterial({color:0xbdb1c8})); ring.rotation.x=Math.PI/2; ring.position.y=-.012; scene.add(ring);
-    const environment=new RoomEnvironment();const pmrem=new THREE.PMREMGenerator(renderer);const env=pmrem.fromScene(environment,.04);scene.environment=env.texture;scene.environmentIntensity=.65;environment.dispose();pmrem.dispose();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.53,.0014,6,100),new THREE.MeshBasicMaterial({color:0xc1ad8b})); ring.rotation.x=Math.PI/2; ring.position.y=-.012; scene.add(ring);
+    const environment=new RoomEnvironment();const pmrem=new THREE.PMREMGenerator(renderer);const env=pmrem.fromScene(environment,.04);scene.environment=env.texture;scene.environmentIntensity=.85;environment.dispose();pmrem.dispose();
     const avatar = new THREE.Group(); scene.add(avatar);
     const render = () => renderer.render(scene,camera);
     const fit=()=>{const target=state.current?.avatar||avatar;if(!target.children.length)return;target.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(target,true),size=bounds.getSize(new THREE.Vector3());if(!Number.isFinite(size.y)||!size.y)return;const center=bounds.getCenter(new THREE.Vector3());controls.target.set(center.x,center.y,0);const distance=Math.max(size.y,size.x/camera.aspect)/(2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)))*1.14;const direction=camera.position.clone().sub(controls.target).normalize();camera.position.copy(controls.target).addScaledVector(direction,distance);controls.update();render();};
@@ -63,7 +64,7 @@ function AvatarViewer({ options, spin, api, onStatus }: { options: AvatarOptions
     let raf=0; let last=0;
     const tick=(time:number) => { raf=requestAnimationFrame(tick); if(document.hidden || !visible || time-last<30) return; const dt=Math.min((time-last)/1000,.1); last=time; controls.autoRotate=spinRef.current; controls.update(dt); render(); };
     raf=requestAnimationFrame(tick);
-    const defaultView=() => {camera.position.set(.72,1.05,3.45); controls.target.set(0,.91,0); fit(); controls.update(); render();};
+    const defaultView=() => {camera.position.set(1.0,1.05,3.45); controls.target.set(0,.91,0); fit(); controls.update(); render();};
     api.current={
       view: angle => {const distance=camera.position.distanceTo(controls.target);camera.position.set(Math.sin(angle)*distance,1.22,Math.cos(angle)*distance);controls.update();render();},
       reset:defaultView,
@@ -103,8 +104,9 @@ const colors=["#b4a28a","#e8dfcf","#303e53","#713c43","#687360","#343331"];
 const colorNames=["暖沙色","象牙白","午夜蓝","酒红","橄榄绿","炭黑"];
 export default function FittingRoom({profile,onProfile,onExplore}:{profile:Profile;onProfile:()=>void;onExplore:(style:string)=>void}) {
   const [modelGender,setModelGender]=useState<"male"|"female">(profile.presentation==="男装"?"male":"female");
-  const [kind,setKind]=useState<LookKind>("tailored");
-  const [color,setColor]=useState(colors[0]); const [skin,setSkin]=useState("#cda78b");
+  const [kind,setKind]=useState<LookKind>("knit");
+  const [finish,setFinish]=useState<"ceramic"|"natural">("ceramic");
+  const [color,setColor]=useState(colors[1]); const [skin,setSkin]=useState("#cda78b");
   const [body,setBody]=useState<Body>(profile.presentation==="男装"?{height:178,bust:96,waist:78,hip:96}:defaults);const [bodySource,setBodySource]=useState("示例身材");
   const [ease,setEase]=useState(1);const [spin,setSpin]=useState(false);
   const [status,setStatus]=useState("");const api=useRef<ViewerApi|null>(null);
@@ -112,8 +114,8 @@ export default function FittingRoom({profile,onProfile,onExplore}:{profile:Profi
   const options=useRef<AvatarOptions>(null!);
   // Stable options prevent rebuilding the meshes for notifications or camera actions.
   const bottomColor=modelGender==="male"?"#655b4d":"#3c302b";
-  const key=JSON.stringify({body,kind,color,skin,ease,modelGender,bottomColor});
-  const lastKey=useRef(""); if(lastKey.current!==key){options.current={body,kind,color,skin,ease,modelGender,bottomColor};lastKey.current=key;}
+  const key=JSON.stringify({body,kind,color,skin,ease,modelGender,bottomColor,finish});
+  const lastKey=useRef(""); if(lastKey.current!==key){options.current={body,kind,color,skin,ease,modelGender,bottomColor,finish};lastKey.current=key;}
   function selectModel(gender:"male"|"female"){setModelGender(gender);setSpin(false);if(bodySource==="示例身材")setBody(gender==="male"?{height:178,bust:96,waist:78,hip:96}:defaults);setStatus(gender==="male"?"已切换男生模特，当前服装与自定义尺寸仍可继续调整。":"已切换女生模特，当前服装与自定义尺寸仍可继续调整。");}
   function useProfile(){
     const next=modelGender==="male"?{height:178,bust:96,waist:78,hip:96}:{...defaults};let count=0;let clamped=false;
@@ -125,7 +127,7 @@ export default function FittingRoom({profile,onProfile,onExplore}:{profile:Profi
   return <div className="fitting-room">
     <section className="studio-intro"><div><div className="studio-kicker"><span/> YOUR STYLE, IN A NEW DIMENSION</div><h1>穿搭，不必靠<span>想象。</span><i>3D</i></h1><p>换一套衣服，转一个角度。让风格在你眼前发生。</p></div><button className="studio-cta" onClick={()=>onExplore(selected.style)}>为我规划整套搭配 <ArrowUpRight size={18}/></button></section>
     <div className="model-selector" aria-label="选择展示模特"><button aria-pressed={modelGender==="female"} onClick={()=>selectModel("female")}><span>WOMEN</span><b>女生模特</b><small>柔和廓形 · 利落层次</small></button><button aria-pressed={modelGender==="male"} onClick={()=>selectModel("male")}><span>MEN</span><b>男生模特</b><small>干净线条 · 松弛质感</small></button></div>
-    <div className="studio-layout">
+    <div className="studio-finish" aria-label="人台显示材质"><button aria-pressed={finish==="ceramic"} onClick={()=>setFinish("ceramic")}>橱窗人台 · 哑光</button><button aria-pressed={finish==="natural"} onClick={()=>setFinish("natural")}>人物参考 · 肤色</button><span className="weather-note">先看廓形与配色，真人穿搭请看首页实拍图库。</span></div><div className="studio-layout">
       <aside className="wardrobe-panel"><div className="studio-panel-heading"><span>01 / WARDROBE</span><Shirt size={17}/></div><h2>今日，想怎么穿？</h2><p className="studio-muted">四套风格，随心切换</p>
         <div className="wardrobe-list">{wardrobe.map((look,i)=><button key={look.id} className={`wardrobe-card ${kind===look.id?"is-selected":""}`} aria-pressed={kind===look.id} onClick={()=>{setKind(look.id);setColor(look.color);}}><div className={`garment-thumb thumb-${look.id}`} style={{"--garment":look.color,"--bottom":look.bottom} as React.CSSProperties}><span className="mini-top"/><span className="mini-bottom"/></div><div><small>LOOK 0{i+1}</small><b>{look.title}</b><span>{look.subtitle}</span></div>{kind===look.id&&<Check size={15}/>}</button>)}</div>
         <div className="wardrobe-note"><Sparkles size={17}/><p>从一套喜欢的轮廓开始，<br/>慢慢找到自己的风格。</p></div>
@@ -141,7 +143,7 @@ export default function FittingRoom({profile,onProfile,onExplore}:{profile:Profi
         <div className="setting-section"><div className="setting-label"><b>服装配色</b><span>{colorNames[colors.indexOf(color)]||"自选"}</span></div><div className="color-options">{colors.map((c,i)=><button key={c} aria-label={`${colorNames[i]}配色`} aria-pressed={color===c} style={{background:c}} className={color===c?"picked":""} onClick={()=>setColor(c)}>{color===c&&<Check size={13}/>}</button>)}</div><p className="setting-hint">{kind==="skirt"?"调整连衣裙颜色":"调整上装颜色"}</p></div>
         <div className="setting-section"><div className="setting-label"><b>穿着轮廓</b><span>示意松量</span></div><div className="ease-control">{["修身","合身","宽松"].map((s,i)=><button key={s} aria-pressed={ease===i} className={ease===i?"picked":""} onClick={()=>setEase(i)}>{s}</button>)}</div></div>
         <div className="setting-section body-settings"><div className="setting-label"><b>身材比例</b><button onClick={useProfile}>导入我的档案 <ArrowUpRight size={12}/></button></div>{(Object.keys(defaults) as (keyof Body)[]).map(k=><label className="body-slider" key={k}><span>{labels[k]}<output>{body[k]} <small>cm</small></output></span><input type="range" min={limits[k][0]} max={limits[k][1]} value={body[k]} aria-label={`模型${labels[k]}`} onChange={e=>{setBody({...body,[k]:Number(e.target.value)});setBodySource("自定义身材");}}/></label>)}<button className="reset-body" onClick={()=>{setBody(modelGender==="male"?{height:178,bust:96,waist:78,hip:96}:defaults);setBodySource("示例身材");setEase(1);}}><RotateCcw size={12}/> 恢复示例比例</button></div>
-        <div className="setting-section skin-row"><b>肤色调整</b><div className="color-options">{["#eed0b3","#cda78b","#946d52","#583e31"].map((c,i)=><button key={c} aria-label={`肤色调整${i+1}`} aria-pressed={skin===c} style={{background:c}} className={skin===c?"picked":""} onClick={()=>setSkin(c)}>{skin===c&&<Check size={12}/>}</button>)}</div></div>
+        <div className="setting-section skin-row"><b>肤色调整</b><div className="color-options">{["#eed0b3","#cda78b","#946d52","#583e31"].map((c,i)=><button key={c} aria-label={`肤色调整${i+1}`} aria-pressed={skin===c} style={{background:c}} className={skin===c?"picked":""} onClick={()=>{setSkin(c);setFinish("natural");}}>{skin===c&&<Check size={12}/>}</button>)}</div></div>
         <button className="save-look" onClick={()=>api.current?.capture()}><Download size={16}/> 保存这套穿搭</button><p className="setting-hint">模型参数仅用于本次预览，不修改档案</p>
       </aside>
     </div>

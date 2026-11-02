@@ -25,7 +25,7 @@ function allocate(p:StylingPlan){
   return p;
 }
 export function createPlan(p:Profile,f:Preferences):StylingPlan{
-  const base=recommend(p,f)[0];return allocate({budget:Math.max(200,Math.min(50000,f.budget)),occasion:f.occasion,style:f.styles[0]||'简约通勤',note:'金额是新购预算分配，不是商家报价。已有单品不计入新购预算。',revision:1,items:base.items.map((i,n)=>({slot:slots[n],label:labels[n],name:i.name,amount:i.price,locked:false,owned:false,variant:0,reason:reasons[n]}))});
+  const base=recommend(p,f)[0];return allocate({budget:Math.max(200,Math.min(50000,f.budget)),occasion:f.occasion,style:f.styles[0]||'简约通勤',note:(f.weather?`${f.weather.place} · ${f.weather.date}天气已纳入建议。`:'')+'金额是新购预算分配，不是商家报价。已有单品不计入新购预算。',revision:1,items:base.items.map((i,n)=>({slot:slots[n],label:labels[n],name:i.name,amount:i.price,locked:false,owned:false,variant:0,reason:reasons[n]}))});
 }
 function push(s:StylingSession,p:StylingPlan):StylingSession{return {plan:p,history:s.plan?[...s.history,copy(s.plan)].slice(-8):s.history};}
 export function editPlan(s:StylingSession,action:'lock'|'owned'|'swap'|'cheaper'|'casual'|'undo'|'new',p:Profile,f:Preferences,slot?:Slot):StylingSession{
@@ -94,3 +94,5 @@ export function sessionReply(input:string,s:StylingSession,profile:Profile,prefs
   if(next.plan){reply.prefs.budget=next.plan.budget;reply.prefs.styles=[next.plan.style];reply.prefs.occasion=next.plan.occasion;}
   return {...reply,session:next};
 }
+
+export function refreshForWeather(s:StylingSession,p:Profile,f:Preferences):StylingSession { if(!s.plan)return s;const fresh=createPlan(p,f);fresh.items=fresh.items.map(i=>{const prior=s.plan!.items.find(x=>x.slot===i.slot)!;return prior.locked||prior.owned?{...prior}:i;});fresh.note+='已保留锁定和已有单品，遇到天气变化请另行核对它们是否合适。';return push(s,allocate(fresh));}

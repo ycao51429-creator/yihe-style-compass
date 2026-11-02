@@ -8,7 +8,7 @@ export function selectProducts(p:Profile,f:Preferences):Product[]{
 }
 export function advise(input:string,profile:Profile,prefs:Preferences):StylistReply {
   const q=input.trim().slice(0,1000),p={...profile},f={...prefs,styles:[...prefs.styles]};const changes:string[]=[];
-  const budget=q.match(/(?:预算|最多|不超过|控制在|大概|大约)\s*[¥￥]?\s*(\d{2,5})(?:\s*[-到至~]\s*(\d{2,5}))?/i)||q.match(/(\d{2,5})\s*(?:元|块|人民币)/);
+  const budget=q.match(/(?:预算(?:调整为|改为|降到|提高到|为|是)?|最多|不超过|控制在|大概|大约)\s*[¥￥]?\s*(\d{2,5})(?:\s*[-到至~]\s*(\d{2,5}))?/i)||q.match(/(\d{2,5})\s*(?:元|块|人民币)/);
   if(budget){const n=Number(budget[2]||budget[1]);f.budget=Math.min(50000,Math.max(200,n));changes.push(`整套预算 ¥${f.budget}${n<200?"（当前方案最低按 ¥200 规划）":""}`);}
   const rules:[keyof Profile,RegExp][]=[["height",/身高\s*(\d{3}(?:\.\d+)?)/],["weight",/体重\s*(\d{2,3}(?:\.\d+)?)/],["bust",/胸围\s*(\d{2,3})/],["waist",/腰围\s*(\d{2,3})/],["hip",/臀围\s*(\d{2,3})/]];
   const invalid:string[]=[];

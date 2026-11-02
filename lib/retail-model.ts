@@ -6,20 +6,20 @@ import type { AvatarOptions, LookKind } from "./avatar";
 const loader = new GLTFLoader();
 const cache = new Map<string, Promise<THREE.Group>>();
 const garments: Record<LookKind, string[]> = {
-  tailored: ["jacket", "tshirt", "jeans", "shoes"],
+  tailored: ["trenchcoat", "tshirt", "jeans", "boots"],
   knit: ["shirt", "jeans", "shoes"],
-  skirt: ["dress", "shoes"],
+  skirt: ["dress", "boots"],
   sport: ["hoodie", "jeans", "shoes"],
 };
 function load(name: string) {
   if (!cache.has(name)) cache.set(name, loader.loadAsync(new URL(`./models/${name}.glb`, document.baseURI).href).then(g => g.scene).catch(e => { cache.delete(name); throw e; }));
   return cache.get(name)!;
 }
-export async function createRetailModel(kind: LookKind) {
-  const names = ["base_body", ...garments[kind].map(n => `clothing_${n}`)];
+export async function createRetailModel(kind: LookKind, gender: "male" | "female" = "female") {
+  const names = ["base_body", ...garments[kind].map(n => `clothing_${n}`), gender === "male" ? "hair_short04" : "hair_long01"];
   // Show the assembled, dressed figure only after every garment has loaded.
   const assets = await Promise.all(names.map(load));
-  const root = new THREE.Group(); root.name = "retail-mannequin"; root.userData.kind = kind;
+  const root = new THREE.Group(); root.name = "retail-mannequin"; root.userData.kind = kind; root.userData.gender = gender;
   assets.forEach((asset, i) => {
     const part = clone(asset); part.userData.part = names[i];
     part.traverse(object => {
@@ -27,15 +27,21 @@ export async function createRetailModel(kind: LookKind) {
       object.castShadow = true; object.receiveShadow = true; object.frustumCulled = false;
       const originals = Array.isArray(object.material) ? object.material : [object.material];
       const materials = originals.map(old => {
-        if (i === 0) return new THREE.MeshPhysicalMaterial({ color: "#dfd7c8", roughness: .34, metalness: .04, clearcoat: .15 });
+        if (i === 0 || names[i].startsWith("hair_")) { const material=old.clone() as THREE.MeshStandardMaterial; material.roughness=names[i].startsWith("hair_")?.75:.72; material.metalness=0; if(names[i].startsWith("hair_")){material.side=THREE.DoubleSide;material.alphaTest=.35;material.depthWrite=true;} return material; }
         const source = old as THREE.MeshStandardMaterial;
-        const material = new THREE.MeshPhysicalMaterial({ map: source.map, normalMap: source.normalMap, roughnessMap: source.roughnessMap, roughness: .84, sheen: .3, sheenRoughness: .8, sheenColor: new THREE.Color("#ded4c4"), side: THREE.DoubleSide });
+        const material = new THREE.MeshPhysicalMaterial({ map: names[i] === "clothing_jeans" ? null : source.map, normalMap: source.normalMap, roughnessMap: source.roughnessMap, roughness: .84, sheen: .3, sheenRoughness: .8, sheenColor: new THREE.Color("#ded4c4"), side: THREE.DoubleSide });
         return material;
       });
       object.material = Array.isArray(object.material) ? materials : materials[0];
+      if(names[i]==="clothing_trenchcoat"){
+        const g=object.geometry.clone(),pos=g.getAttribute('position');
+        for(let v=0;v<pos.count;v++){if(pos.getY(v)>=.95)continue;pos.setY(v,.95-(.95-pos.getY(v))*.68);for(const morph of g.morphAttributes.position||[])morph.setY(v,morph.getY(v)*.68);}
+        pos.needsUpdate=true;g.computeVertexNormals();object.geometry=g;object.userData.ownGeometry=true;
+      }
+
       object.userData.part = names[i];
-      if (/Eyebrow|Eyelash|Teeth|Tongue/i.test(object.name)) object.visible = false;
-      if (i === 0 && /base/i.test(object.name)) {
+      if (/Teeth|Tongue/i.test(object.name)) object.visible = false;
+      if (i === 0 && /^(Body|base_body)$/i.test(object.name)) {
         // Hide the covered body. The displayed surface belongs to the garment,
         // preventing accidental skin exposure or clipping while morphs change.
         const geometry = object.geometry.clone(), position = geometry.getAttribute("position"), index = geometry.index;
@@ -49,7 +55,7 @@ export async function createRetailModel(kind: LookKind) {
       }
     });
     part.updateMatrixWorld(true);
-    for(const [name,angle] of [["upperarm_l",-.48],["upperarm_r",.48]] as const){
+    for(const [name,angle] of [["upperarm_l",-.52],["upperarm_r",.48]] as const){
       const bone=part.getObjectByName(name);if(!bone||!bone.parent)continue;
       const q=bone.getWorldQuaternion(new THREE.Quaternion());q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),angle));
       bone.quaternion.copy(bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(q));part.updateMatrixWorld(true);
@@ -67,16 +73,17 @@ export function updateRetailModel(root: THREE.Group, options: AvatarOptions) {
     const mesh = object as THREE.SkinnedMesh;
     if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
       mesh.morphTargetInfluences.fill(0);
-      const values: Record<string, number> = { gender_female: .65, weight_max: Math.max(0, Math.min(.7,(girth-1)*1.8)), weight_min: Math.max(0, Math.min(.45,(1-girth)*2)), proportions_ideal: .15 };
+      const values: Record<string, number> = { gender_female: options.modelGender === "male" ? 0 : 1, gender_male: options.modelGender === "male" ? 1 : 0, weight_max: Math.max(0, Math.min(.7,(girth-1)*1.8)), weight_min: Math.max(0, Math.min(.45,(1-girth)*2)), proportions_ideal: .3 };
       Object.entries(values).forEach(([key,value]) => { const index=mesh.morphTargetDictionary![key]; if(index!==undefined)mesh.morphTargetInfluences![index]=value; });
     }
     const part: string = object.userData.part || "";
     const mats = Array.isArray(object.material) ? object.material : [object.material];
     mats.forEach(m => {
       const material = m as THREE.MeshPhysicalMaterial;
-      if (part === "base_body") material.color.set(options.skin === "#cda78b" ? "#e0d8cb" : options.skin);
-      else if (/jacket|shirt|hoodie|dress/.test(part) && part !== "clothing_tshirt") material.color.set(options.color);
-      else material.color.set(part === "clothing_tshirt" ? "#e5dfd4" : part === "clothing_jeans" ? "#3c4b5c" : "#4b433b");
+      if (part === "base_body") { if (/^Body$/i.test(object.name)) material.color.set(options.skin); }
+      else if (part.startsWith("hair_")) material.color.set("#332921");
+      else if (/jacket|trenchcoat|shirt|hoodie|dress/.test(part) && part !== "clothing_tshirt") material.color.set(options.color);
+      else material.color.set(part === "clothing_tshirt" ? "#e5dfd4" : part === "clothing_jeans" ? (options.bottomColor||"#343331") : "#332c28");
     });
   });
   // Girth is a visual morph only; no real garment size is inferred.

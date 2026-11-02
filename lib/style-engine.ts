@@ -2,8 +2,8 @@ export type Profile = { height: string; weight: string; bust: string; waist: str
 export type Preferences = { budget: number; styles: string[]; occasion: string; season: string; colors: string; avoid: string };
 export type Outfit = { id: string; variant: number; style: string; title: string; reason: string; items: { name: string; price: number }[]; total: number; fitNote: string };
 const sets: Record<string, string[]> = {
-  "简约通勤": ["轻薄西装外套", "直筒长裤", "简约乐福鞋", "帆布通勤包"],
-  "松弛休闲": ["棉质宽松衬衫", "棉质阔腿裤", "低帮帆布鞋", "帆布斜挎包"],
+  "简约通勤": ["燕麦短外套与奶油白内搭", "深咖垂坠阔腿裤", "深棕简洁乐福鞋", "小巧结构感肩包"],
+  "松弛休闲": ["奶油白宽松衬衫", "浅灰直筒长裤", "米白低帮休闲鞋", "轻便帆布托特包"],
   "法式复古": ["条纹棉质针织衫", "直筒牛仔裤", "复古便鞋", "简约帆布包"],
   "街头运动": ["圆领棉质卫衣", "束脚运动裤", "运动鞋", "棒球帽"],
   "温柔清新": ["棉质开衫", "垂坠半裙", "轻便平底鞋", "轻巧单肩包"],
@@ -24,6 +24,7 @@ export function recommend(p: Profile, f: Preferences): Outfit[] {
   const avoid = f.avoid.split(/[，,、;；\s]+/).filter(Boolean);
   return [0, 1, 2].map(i => {
     const style = styles[i % styles.length]; let items = [...sets[style]];
+    if(p.presentation==="男装"&&style==="简约通勤")items=["午夜蓝衬衫式外套与象牙白内搭","灰褐直筒长裤","米白简洁休闲鞋","深色简约通勤包"];
     if (p.presentation === "男装" || p.presentation === "中性") items[1] = items[1].replace("垂坠半裙", "垂坠直筒裤");
     if (f.season === "夏季") items[0] = style === "街头运动" ? "透气棉质短袖" : "透气短袖衬衫";
     if (f.season === "冬季") items[0] = "保暖棉服与棉质打底";

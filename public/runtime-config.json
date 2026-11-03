@@ -1,5 +1,7 @@
 {
   "advisorEndpoint": "",
   "amapJsKey": "",
-  "amapServiceHost": ""
+  "amapServiceHost": "",
+  "tryOnEndpoint": "",
+  "offersEndpoint": ""
 }

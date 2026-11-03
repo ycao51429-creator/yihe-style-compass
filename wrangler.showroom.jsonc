@@ -1,0 +1,14 @@
+{
+  "name": "yihe-showroom-api",
+  "main": "services/showroom-worker.ts",
+  "compatibility_date": "2026-10-01",
+  "vars": {
+    "SHOWROOM_ALLOWED_ORIGIN": "https://ycao51429-creator.github.io",
+    "TRYON_ENABLED": "false"
+  },
+  "ratelimits": [{
+    "name": "TRYON_RATE_LIMITER",
+    "namespace_id": "1030301",
+    "simple": { "limit": 6, "period": 60 }
+  }]
+}

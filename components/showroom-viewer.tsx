@@ -1,0 +1,23 @@
+"use client";
+import {forwardRef,useEffect,useImperativeHandle,useRef,useState} from 'react';
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {createShowroomModel,updateShowroomModel,disposeShowroomModel,type ShowroomGender,type ShowroomMeasurements,type ShowroomGarment} from '../lib/showroom-model';
+export type ShowroomView={snapshot:()=>string;view:(angle:number)=>void};
+export default forwardRef<ShowroomView,{gender:ShowroomGender;body:ShowroomMeasurements;garments:ShowroomGarment[];onReady:(ready:boolean)=>void}>(function ShowroomViewer({gender,body,garments,onReady},ref){
+ const host=useRef<HTMLDivElement>(null),api=useRef<ShowroomView|null>(null),model=useRef<THREE.Group|null>(null),redraw=useRef<()=>void>(()=>{}),latest=useRef({body,garments,onReady});latest.current={body,garments,onReady};const[status,setStatus]=useState('正在搭建你的白模橱窗…');
+ useImperativeHandle(ref,()=>({snapshot:()=>{if(!api.current)throw new Error('请等待人台加载完成');return api.current.snapshot();},view:a=>api.current?.view(a)}),[]);
+ useEffect(()=>{if(model.current){updateShowroomModel(model.current,body,garments);redraw.current();}},[body,garments]);
+ useEffect(()=>{let cancelled=false,frame=0,visible=true;const el=host.current!;latest.current.onReady(false);setStatus('正在搭建你的白模橱窗…');let renderer:THREE.WebGLRenderer;
+  try{renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});}catch{setStatus('当前浏览器无法显示 3D。请使用系统浏览器并开启硬件加速；仍可选择商品和查看资料。');return;}
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;el.appendChild(renderer.domElement);renderer.domElement.setAttribute('aria-label','可拖动旋转的白色试衣模特');
+  const scene=new THREE.Scene();scene.background=new THREE.Color('#dcded9');const camera=new THREE.PerspectiveCamera(34,1,.01,30);camera.position.set(0,1.03,3.65);const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,.88,0);controls.enableDamping=true;controls.enablePan=false;controls.minDistance=2.1;controls.maxDistance=5.2;controls.minPolarAngle=.55;controls.maxPolarAngle=1.75;
+  scene.add(new THREE.HemisphereLight('#ffffff','#78776d',2.3));const key=new THREE.DirectionalLight('#fff9ef',3.4);key.position.set(-2,4,3);key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-2;key.shadow.camera.right=2;key.shadow.camera.top=3;key.shadow.camera.bottom=-2;key.shadow.bias=-.0004;key.shadow.normalBias=.025;scene.add(key);const fill=new THREE.DirectionalLight('#eaf3ff',1.8);fill.position.set(2,2,-2);scene.add(fill);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:'#dcded9',roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=-.023;floor.receiveShadow=true;scene.add(floor);
+  redraw.current=()=>{controls.update();renderer.render(scene,camera);};const resize=()=>{const w=el.clientWidth,h=el.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();redraw.current();};const observer=new ResizeObserver(resize);observer.observe(el);const intersection=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;});intersection.observe(el);resize();
+  const render=()=>{frame=requestAnimationFrame(render);if(visible&&!document.hidden){controls.update();renderer.render(scene,camera);}};render();
+  createShowroomModel(gender).then(root=>{if(cancelled){disposeShowroomModel(root);return;}model.current=root;scene.add(root);updateShowroomModel(root,latest.current.body,latest.current.garments);redraw.current();setStatus('');latest.current.onReady(true);api.current={view:angle=>{camera.position.set(Math.sin(angle)*3.65,1.03,Math.cos(angle)*3.65);controls.target.set(0,.88,0);controls.update();renderer.render(scene,camera);},snapshot:()=>{renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');}};}).catch(()=>{if(!cancelled)setStatus('人台文件加载失败，请检查网络后切换男女模特重试。');});
+  return()=>{cancelled=true;redraw.current=()=>{};api.current=null;latest.current.onReady(false);cancelAnimationFrame(frame);observer.disconnect();intersection.disconnect();controls.dispose();if(model.current){disposeShowroomModel(model.current);model.current=null;}floor.geometry.dispose();(floor.material as THREE.Material).dispose();renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();};
+ },[gender]);
+ return <div className="showroom-renderer"><div className="showroom-canvas" ref={host}/>{status&&<div className="showroom-loading" role="status">{status}</div>}</div>;
+});

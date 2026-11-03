@@ -21,3 +21,9 @@ arm pose and male/female body morphs at runtime. The trenchcoat hem is shortened
 and the jeans color texture is omitted for a plain trouser appearance. These garments are generic examples,
 not scans or replicas of any products in the shopping catalog. No cloth physics
 or reliable SKU sizing prediction is provided.
+
+The white showroom (2026-11-03) bakes the gender morphs and relaxed arm pose,
+replaces facial anatomy with a smooth featureless lathed head, softens retail
+surface details and uses white physical materials with a dark pedestal. Ten
+measurement controls deform neutral vertices without cumulative slider drift.
+These controls are illustrative proportions, not calibrated body measurements.

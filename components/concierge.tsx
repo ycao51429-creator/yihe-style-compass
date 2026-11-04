@@ -38,7 +38,7 @@ function ProductDetail({product,onClose,onAsk,onFavorite,saved}:{product:Product
     </div></div></Modal>;
 }
 
-export default function Concierge({view,profile,prefs,onChange,onNavigate,onGenerate}:{view:"home"|"catalog";profile:Profile;prefs:Preferences;onChange:(p:Profile,f:Preferences)=>void;onNavigate:(n:number)=>void;onGenerate:()=>void}){
+export default function Concierge({externalPrompt,view,profile,prefs,onChange,onNavigate,onGenerate}:{externalPrompt?:{id:string;text:string}|null;view:"home"|"catalog";profile:Profile;prefs:Preferences;onChange:(p:Profile,f:Preferences)=>void;onNavigate:(n:number)=>void;onGenerate:()=>void}){
   const[messages,setMessages]=useState<Message[]>([{id:0,role:"advisor",text:"你好，我是衣合，你的数字穿搭顾问。\n不急着买，我们先找到适合你生活的那一套。今天要去哪里、想花多少钱，或者有什么一定不想穿的，都可以直接告诉我。"}]);
   const[chatOpen,setChatOpen]=useState(false);
   useEffect(()=>{const mq=matchMedia("(max-width:760px)");const update=()=>{if(!mq.matches)setChatOpen(false);};mq.addEventListener("change",update);return()=>mq.removeEventListener("change",update);},[]);
@@ -82,6 +82,7 @@ export default function Concierge({view,profile,prefs,onChange,onNavigate,onGene
     setMessages(m=>[...m,{id:stamp+1,role:'advisor' as const,text,products:reply.productIds,action:reply.action,sources,mode}].slice(-40));
     setTimeout(()=>{const f=feed.current;if(f)f.scrollTop=f.scrollHeight;},30);
   }
+  const lastExternal=useRef(""); useEffect(()=>{if(externalPrompt && lastExternal.current!==externalPrompt.id){lastExternal.current=externalPrompt.id;void send(externalPrompt.text);}},[externalPrompt]);
   function favorite(id:string){setSaved(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);}
   function compare(id:string){setCompared(s=>{if(s.includes(id))return s.filter(x=>x!==id);if(s.length>=3){setStatus("一次对比最多三件，先移除一件再添加。");return s;}return [...s,id];});}
   function action(type:Message["action"]){setChatOpen(false);if(type==="outfits")onGenerate();else if(type==="profile")onNavigate(0);else if(type==="stores")onNavigate(3);else if(type==="studio")onNavigate(4);else if(type==="catalog")onNavigate(6);}

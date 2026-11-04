@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {parseWardrobe,serializeWardrobe,mergeWardrobe,costPerWear,recordWear,wardrobePrompt,localDay} from '../lib/wardrobe.ts';
+const item={id:'1',name:'黑色直筒裤',category:'裤装',color:'黑色',season:'四季',material:'棉',price:200,state:'owned',wearDates:[],createdAt:new Date().toISOString()};
+assert.deepEqual(parseWardrobe(null),[]);assert.deepEqual(parseWardrobe(serializeWardrobe([item])),[item]);
+assert.equal(costPerWear(item),null);const worn=recordWear(item,'2026-11-05');assert.equal(costPerWear(worn),200);assert.deepEqual(recordWear(worn,'2026-11-05'),worn);assert.equal(costPerWear(recordWear(worn,'2026-11-06')),100);assert.equal(item.wearDates.length,0);
+assert.equal(recordWear({...item,state:'wanted'}).wearDates.length,0);assert.equal(costPerWear({...worn,price:null}),null);assert.equal(costPerWear({...worn,price:0}),0);
+assert.deepEqual(mergeWardrobe([item],[{...item,name:'changed'}]),[item]);assert.equal(mergeWardrobe([item],[{...item,id:'2'}]).length,2);
+for(const invalid of [{...item,price:-1},{...item,price:'100'},{...item,state:'bad'},{...item,category:'unknown'},{...item,wearDates:['2026-02-31']},{...item,id:''}])assert.throws(()=>parseWardrobe(serializeWardrobe([invalid])));
+assert.throws(()=>parseWardrobe('{'));assert.throws(()=>parseWardrobe(JSON.stringify({version:2,items:[]})));assert.throws(()=>parseWardrobe(serializeWardrobe([item,item])));assert.throws(()=>mergeWardrobe(Array.from({length:100},(_,i)=>({...item,id:String(i)})),[{...item,id:'new'}]));
+assert.ok(!wardrobePrompt([item,{...item,name:'未买的裙子',state:'wanted'}]).includes('未买的裙子'));assert.match(wardrobePrompt([item]),/我有.*黑色直筒裤/);assert.match(localDay(),/^\d{4}-\d{2}-\d{2}$/);
+console.log('Wardrobe checks passed: schema, invalid imports, merge, ownership, immutable daily wear, cost calculation and advisor context.');

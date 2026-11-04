@@ -11,6 +11,8 @@ import AMapPanel from '../components/amap-panel';
 import {amapSearchUrl,type LocationPoint} from '../lib/weather';
 import Merchant from "../components/merchant";
 import MobileNavigation from "../components/mobile-navigation";
+import PersonalWardrobe from "../components/personal-wardrobe";
+import {WARDROBE_KEY} from "../lib/wardrobe";
 import { discoveryRequest, isStaticDeployment } from "../lib/client-api";
 
 const initialProfile: Profile = { height: "", weight: "", bust: "", waist: "", hip: "", face: "不确定", hair: "", appearance: "", fit: "合身", presentation: "不限" };
@@ -22,6 +24,8 @@ const safeLink = (url: string) => /^https?:\/\//i.test(url) ? url : "#";
 export default function Home() {
   const [tab, setTab] = useState(5);
   const [showroomOpened,setShowroomOpened]=useState(false);
+  const [wardrobeOpened,setWardrobeOpened]=useState(false);
+  const [wardrobeRequest,setWardrobeRequest]=useState<{id:string;text:string}|null>(null);
   const [showroomIncoming,setShowroomIncoming]=useState<Garment[]>([]);
   useEffect(()=>{const add=(event:Event)=>{const raw=(event as CustomEvent).detail;if(!Array.isArray(raw))return;const items=raw.map(g=>parseDroppedGarment(JSON.stringify(g))).filter((g):g is Garment=>!!g);if(items.length){setShowroomIncoming(items);setShowroomOpened(true);setTab(4);window.scrollTo({top:0,behavior:"smooth"});}};window.addEventListener("yihe-showroom-add",add);return()=>window.removeEventListener("yihe-showroom-add",add);},[]);
   const [sessionVersion,setSessionVersion]=useState(0);
@@ -48,10 +52,10 @@ export default function Home() {
   }, []);
   useEffect(() => { if (!notice) return; const t = setTimeout(() => setNotice(""), 5000); return () => clearTimeout(t); }, [notice]);
   function update(field: keyof Profile, value: string) { setProfile(p => ({ ...p, [field]: value })); }
-  function go(n: number) { if(n===4)setShowroomOpened(true); setTab(n); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function go(n: number) { if(n===4)setShowroomOpened(true); if(n===7)setWardrobeOpened(true); setTab(n); window.scrollTo({ top: 0, behavior: "smooth" }); }
   function demo() { setProfile({ ...initialProfile, height: "168", weight: "58", bust: "86", waist: "70", hip: "94", face: "圆脸", hair: "齐肩发" }); setNotice("已填入示例数据，请按你的真实情况修改。"); }
   function save() { try { if (!consent) { setNotice("请先勾选仅在这台设备保存档案。"); return; } localStorage.setItem("yihe-profile-v1", JSON.stringify({ profile, prefs:{...prefs,weather:undefined} })); setSaved(true); setNotice("档案已保存在这台设备，不包含照片或定位。"); } catch { setNotice("浏览器不允许本地保存，你仍可继续使用。"); } }
-  function clear() { setShowroomIncoming([]); locationVersion.current++;setLocating(false);setLocationStatus(""); try { localStorage.removeItem("yihe-saved-looks-v1"); } catch {} setSessionVersion(n=>n+1); webAbort.current?.abort(); shopsAbort.current?.abort(); try { localStorage.removeItem("yihe-profile-v1"); } catch {} setProfile(initialProfile); setPrefs(initialPrefs); setSaved(false); setConsent(false); setShareSearch(false); setOutfits([]); setFavorites([]); setWebResults([]); setShops([]); setCoords(null); setCity(""); setPhoto(""); if (photoRef.current) URL.revokeObjectURL(photoRef.current); photoRef.current = ""; setShopStatus(""); setWebStatus(""); setNotice("档案、对话、收藏、照片和本次位置已清除。"); }
+  function clear() { setWardrobeRequest(null); try{localStorage.removeItem(WARDROBE_KEY);}catch{} setShowroomIncoming([]); locationVersion.current++;setLocating(false);setLocationStatus(""); try { localStorage.removeItem("yihe-saved-looks-v1"); } catch {} setSessionVersion(n=>n+1); webAbort.current?.abort(); shopsAbort.current?.abort(); try { localStorage.removeItem("yihe-profile-v1"); } catch {} setProfile(initialProfile); setPrefs(initialPrefs); setSaved(false); setConsent(false); setShareSearch(false); setOutfits([]); setFavorites([]); setWebResults([]); setShops([]); setCoords(null); setCity(""); setPhoto(""); if (photoRef.current) URL.revokeObjectURL(photoRef.current); photoRef.current = ""; setShopStatus(""); setWebStatus(""); setNotice("档案、衣橱、对话、收藏、照片和本次位置已清除。"); }
   async function searchReferences() {
     if (!shareSearch) { setWebStatus("允许发送穿搭关键词后，可自动检索；也可以通过下方链接自行搜索。"); return; }
     webAbort.current?.abort(); const controller = new AbortController(); webAbort.current = controller;
@@ -78,7 +82,7 @@ export default function Home() {
   const visibleOutfits = onlySaved ? outfits.filter(o => favorites.includes(o.id)) : outfits;
   const sortedShops = [...shops].sort((a, b) => sort === "rating" ? (b.rating ?? -1) - (a.rating ?? -1) : (a.distance ?? Infinity) - (b.distance ?? Infinity));
   return <div className={tab >= 5 ? "app-shell concierge-active" : tab === 4 ? "app-shell studio-active" : "app-shell"}>
-    <header className="topbar"><button className="brand" onClick={() => go(5)} aria-label="衣合首页"><span className="brand-mark">衣</span><b>衣合<span>STYLE COMPASS</span></b></button><nav aria-label="主导航"><button className={tab === 5 ? "active" : ""} onClick={() => go(5)}>穿搭顾问</button><button className={tab === 6 ? "active" : ""} onClick={() => go(6)}>精选衣橱</button><button className={tab === 4 ? "active" : ""} onClick={() => go(4)}>3D 试衣间</button>{tabs.map((t, i) => <button key={t} className={tab === i ? "active" : ""} onClick={() => go(i)}>{t}</button>)}</nav><button aria-label="使用说明" className="help-btn" onClick={() => setHelp(true)}><CircleHelp size={18}/><span>使用说明</span></button></header>
+    <header className="topbar"><button className="brand" onClick={() => go(5)} aria-label="衣合首页"><span className="brand-mark">衣</span><b>衣合<span>STYLE COMPASS</span></b></button><nav aria-label="主导航"><button className={tab === 5 ? "active" : ""} onClick={() => go(5)}>穿搭顾问</button><button className={tab === 6 ? "active" : ""} onClick={() => go(6)}>精选衣橱</button><button className={tab === 7 ? "active" : ""} onClick={() => go(7)}>我的衣橱</button><button className={tab === 4 ? "active" : ""} onClick={() => go(4)}>3D 试衣间</button>{tabs.map((t, i) => <button key={t} className={tab === i ? "active" : ""} onClick={() => go(i)}>{t}</button>)}</nav><button aria-label="使用说明" className="help-btn" onClick={() => setHelp(true)}><CircleHelp size={18}/><span>使用说明</span></button></header>
     <main>
       {isStaticDeployment && tab < 4 && <p className="deployment-note">独立网页版 · 无需登录。搭配在本机生成；门店与网上参考可通过外部搜索查看。</p>}
       {tab < 4 && <><div className="eyebrow"><span/> PERSONAL STYLE, REAL LIFE <span className="edition">中国大陆 · CNY</span></div>
@@ -86,8 +90,8 @@ export default function Home() {
       <div className="stepbar">{tabs.map((t, i) => <button key={t} onClick={() => go(i)} className={tab === i ? "selected" : ""}><span>{i < tab ? <Check size={13}/> : `0${i + 1}`}</span>{t}{i < 3 && <i/>}</button>)}</div>
       </>}
       <div hidden={tab!==5&&tab!==3}><WeatherPanel point={coords} city={city} weather={prefs.weather} locating={locating} status={locationStatus} onLocate={locate} onCancel={()=>{locationVersion.current++;setLocating(false);setLocationStatus('已取消定位，可以选择城市继续。');}} onCity={(name,point)=>{locationVersion.current++;setLocating(false);setCoords(point);setCity(name);setShops([]);setShopStatus('');setLocationStatus(`已选择${name}市中心附近，可查看天气或搜索门店。`);}} onWeather={weather=>setPrefs(f=>({...f,weather}))}/></div>
-      <div hidden={tab < 5}><Concierge key={sessionVersion} view={tab === 6 ? "catalog" : "home"} profile={profile} prefs={prefs} onChange={(p,f)=>{setProfile(p);setPrefs(f);}} onNavigate={go} onGenerate={generate}/></div>
-      {showroomOpened && <div hidden={tab !== 4}><Suspense fallback={<p role="status">正在打开试衣橱窗…</p>}><Showroom key={sessionVersion} profile={profile} avoid={prefs.avoid} incoming={showroomIncoming}/></Suspense></div>}
+      <div hidden={tab !== 5 && tab !== 6}><Concierge externalPrompt={wardrobeRequest} key={sessionVersion} view={tab === 6 ? "catalog" : "home"} profile={profile} prefs={prefs} onChange={(p,f)=>{setProfile(p);setPrefs(f);}} onNavigate={go} onGenerate={generate}/></div>
+      {wardrobeOpened && <div hidden={tab!==7}><PersonalWardrobe key={sessionVersion} onAsk={text=>{setWardrobeRequest({id:crypto.randomUUID(),text});go(5);}}/></div>}{showroomOpened && <div hidden={tab !== 4}><Suspense fallback={<p role="status">正在打开试衣橱窗…</p>}><Showroom key={sessionVersion} profile={profile} avoid={prefs.avoid} incoming={showroomIncoming}/></Suspense></div>}
       {tab === 0 && <div className="profile-grid"><section className="panel"><div className="panel-title"><div><p className="overline">YOUR PROFILE</p><h2>先认识一下你</h2></div><button className="text-btn" onClick={demo}>试试示例 <ArrowUpRight size={15}/></button></div><form onSubmit={e => { e.preventDefault(); go(1); }}>
         <div className="section-caption"><span>01</span><h3>身材信息</h3><small>用于版型与比例建议</small></div>
         <div className="fields two">{([["height", "身高", "cm", 100, 230], ["weight", "体重", "kg", 25, 250]] as const).map(([key, label, unit, min, max]) => <label key={key}>{label}<span className="input-unit"><input type="number" min={min} max={max} step="0.1" required value={profile[key]} onChange={e => update(key, e.target.value)} placeholder={key === "height" ? "例如 168" : "例如 58"}/><em>{unit}</em></span></label>)}</div>

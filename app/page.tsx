@@ -1,6 +1,6 @@
 "use client";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, ArrowRight, Check, ChevronLeft, Heart, LocateFixed, MapPin, SlidersHorizontal, Sparkles, Shirt, Bookmark, X, Download, Search, ShieldCheck, Camera, CircleHelp } from "lucide-react";
+import { ArrowUpRight, ArrowRight, Check, ChevronLeft, Heart, LocateFixed, MapPin, SlidersHorizontal, Sparkles, Shirt, Bookmark, X, Download, Search, ShieldCheck, Camera, CircleHelp, CloudSun, ChevronDown } from "lucide-react";
 import { recommend, makeQuery, type Profile, type Preferences, type Outfit } from "../lib/style-engine";
 import Look from "../components/look";
 const Showroom = lazy(() => import("../components/showroom"));
@@ -25,6 +25,7 @@ export default function Home() {
   const [tab, setTab] = useState(5);
   const [showroomOpened,setShowroomOpened]=useState(false);
   const [wardrobeOpened,setWardrobeOpened]=useState(false);
+  const [weatherOpened,setWeatherOpened]=useState(false);
   const [wardrobeRequest,setWardrobeRequest]=useState<{id:string;text:string}|null>(null);
   const [showroomIncoming,setShowroomIncoming]=useState<Garment[]>([]);
   useEffect(()=>{const add=(event:Event)=>{const raw=(event as CustomEvent).detail;if(!Array.isArray(raw))return;const items=raw.map(g=>parseDroppedGarment(JSON.stringify(g))).filter((g):g is Garment=>!!g);if(items.length){setShowroomIncoming(items);setShowroomOpened(true);setTab(4);window.scrollTo({top:0,behavior:"smooth"});}};window.addEventListener("yihe-showroom-add",add);return()=>window.removeEventListener("yihe-showroom-add",add);},[]);
@@ -89,7 +90,8 @@ export default function Home() {
       <section className="intro"><div><h1>{[<>好穿搭，从<span>了解你</span>开始。</>, <>找到你的<span>风格坐标。</span></>, <>适合你的，<span>才是好搭配。</span></>, <>把喜欢的穿搭，<span>带进生活。</span></>][tab]}</h1><p>{["每个人的身材与喜好都不同。让每一次选择，更适合自己。", "预算、场景和偏好，一起决定属于你的日常穿搭。", "从比例、配色到预算，给每一件衣服一个合适的位置。", "从你所在的城市出发，发现可以走进去试穿的店。"][tab]}</p></div><span className="chapter">0{tab + 1}<small> / 04</small></span></section>
       <div className="stepbar">{tabs.map((t, i) => <button key={t} onClick={() => go(i)} className={tab === i ? "selected" : ""}><span>{i < tab ? <Check size={13}/> : `0${i + 1}`}</span>{t}{i < 3 && <i/>}</button>)}</div>
       </>}
-      <div hidden={tab!==5&&tab!==3}><WeatherPanel point={coords} city={city} weather={prefs.weather} locating={locating} status={locationStatus} onLocate={locate} onCancel={()=>{locationVersion.current++;setLocating(false);setLocationStatus('已取消定位，可以选择城市继续。');}} onCity={(name,point)=>{locationVersion.current++;setLocating(false);setCoords(point);setCity(name);setShops([]);setShopStatus('');setLocationStatus(`已选择${name}市中心附近，可查看天气或搜索门店。`);}} onWeather={weather=>setPrefs(f=>({...f,weather}))}/></div>
+      {tab===5&&<button className="home-weather-entry" aria-expanded={weatherOpened} aria-controls="home-weather-panel" onClick={()=>setWeatherOpened(open=>!open)}><CloudSun size={20}/><span><b>{prefs.weather?`${prefs.weather.place} · 体感 ${Math.round(prefs.weather.feels)}°`:'今天的天气，也会影响穿搭'}</b><small>{prefs.weather?'天气已用于搭配，可随时更新':'按需选择城市，获取适合今天的建议'}</small></span><span className="home-weather-entry-action">{weatherOpened?'收起天气':'查看天气'} <ChevronDown size={15}/></span></button>}
+      <div id="home-weather-panel" hidden={tab!==3&&(tab!==5||!weatherOpened)}><WeatherPanel point={coords} city={city} weather={prefs.weather} locating={locating} status={locationStatus} onLocate={locate} onCancel={()=>{locationVersion.current++;setLocating(false);setLocationStatus('已取消定位，可以选择城市继续。');}} onCity={(name,point)=>{locationVersion.current++;setLocating(false);setCoords(point);setCity(name);setShops([]);setShopStatus('');setLocationStatus(`已选择${name}市中心附近，可查看天气或搜索门店。`);}} onWeather={weather=>setPrefs(f=>({...f,weather}))}/></div>
       <div hidden={tab !== 5 && tab !== 6}><Concierge externalPrompt={wardrobeRequest} key={sessionVersion} view={tab === 6 ? "catalog" : "home"} profile={profile} prefs={prefs} onChange={(p,f)=>{setProfile(p);setPrefs(f);}} onNavigate={go} onGenerate={generate}/></div>
       {wardrobeOpened && <div hidden={tab!==7}><PersonalWardrobe key={sessionVersion} onAsk={text=>{setWardrobeRequest({id:crypto.randomUUID(),text});go(5);}}/></div>}{showroomOpened && <div hidden={tab !== 4}><Suspense fallback={<p role="status">正在打开试衣橱窗…</p>}><Showroom key={sessionVersion} profile={profile} avoid={prefs.avoid} incoming={showroomIncoming}/></Suspense></div>}
       {tab === 0 && <div className="profile-grid"><section className="panel"><div className="panel-title"><div><p className="overline">YOUR PROFILE</p><h2>先认识一下你</h2></div><button className="text-btn" onClick={demo}>试试示例 <ArrowUpRight size={15}/></button></div><form onSubmit={e => { e.preventDefault(); go(1); }}>
